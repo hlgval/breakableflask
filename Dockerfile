@@ -1,15 +1,27 @@
-FROM python:3.12-slim
+Dockerfile:
+  runs-on: ubuntu-latest
+  needs: Dependances
 
-WORKDIR /app
+  steps:
+    - name: Récupération du repository
+      uses: actions/checkout@v7
 
-COPY requirements.txt .
+    - name: Contrôle du Dockerfile avec Trivy
+      uses: aquasecurity/trivy-action@v0.36.0
+      with:
+        scan-type: config
+        scan-ref: Dockerfile
+        severity: HIGH,CRITICAL
+        exit-code: 1
 
-RUN pip install --no-cache-dir -r requirements.txt
+    - name: Construction de l'image Docker
+      run: |
+        docker build -t breakableflask:test .
 
-COPY . .
-
-RUN useradd -m appuser
-
-USER appuser
-
-CMD ["python", "main.py"]
+    - name: Contrôle des dépendances de l'image Docker avec Trivy
+      uses: aquasecurity/trivy-action@v0.36.0
+      with:
+        scan-type: image
+        image-ref: breakableflask:test
+        severity: HIGH,CRITICAL
+        exit-code: 1
